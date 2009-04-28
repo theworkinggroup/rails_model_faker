@@ -4,6 +4,14 @@ module RailsModelFaker
     base.send(:include, InstanceMethods)
   end
   
+  def self.add_module(new_module)
+    FakeMethods.send(:extend, new_module)
+  end
+  
+  module FakeMethods
+    # Placeholder for generic fake methods
+  end
+  
   module ClassMethods
     def can_fake(*names, &block)
       options = nil
@@ -49,6 +57,10 @@ module RailsModelFaker
     def create_fake(params = nil)
       create(fake_params(params))
     end
+
+    def create_fake!(params = nil)
+      create!(fake_params(params))
+    end
     
     def fake_param(name)
       name = name.to_sym
@@ -69,13 +81,19 @@ module RailsModelFaker
             if (reflection = reflect_on_association(field))
               primary_key = reflection.primary_key_name.to_sym
               block = @rmf_can_fake[field] =
-                lambda do |existing_params|
+                lambda do |new_class, existing_params|
                   existing_params.key?(primary_key) ? nil : reflection.klass.send(:create_fake)
                 end
             end
           end
-            
-          result = block.call(params)
+          
+          result =  
+            case (block)
+            when Module
+              block.send(field, self, params)
+            else
+              block.call(self, params)
+            end
           
           case (result)
           when nil
