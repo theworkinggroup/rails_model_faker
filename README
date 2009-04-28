@@ -41,6 +41,15 @@ Any related model can be faked without any special options:
     can_fake :account
   end
 
+This also works for associations:
+
+  class MyModel < ActiveRecord::Base
+    has_many :accounts
+  end
+
+  fake = MyModel.create_fake
+  fake_account = fake.accounts.create_fake
+
 Using a fake-capable model is straightforward either by a direct call, or
 by an intermediate step:
 
@@ -53,6 +62,19 @@ by an intermediate step:
   fake = MyModel.create_fake
   # Equivalent method using fake_params
   fake = MyModel.create(MyModel.fake_params)
+
+  # Create an instance of a fake model and throw exceptions on a
+  # validation failure.
+  fake = MyModel.create_fake!
+  # Equivalent method using fake_params
+  fake = MyModel.create!(MyModel.fake_params)
+
+In all cases, options can be passed in to the various methods to seed
+the fake with some pre-defined data:
+
+  fake = MyModel.create_fake(:name => 'Test')
+
+Any keys that are defined will not be re-populated.
 
 All models can be interrogated as to their faking capability:
 
