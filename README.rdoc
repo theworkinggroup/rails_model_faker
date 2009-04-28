@@ -7,7 +7,7 @@ via a plugin.
 
 == Installation
 
-  script/plugin install git://github.com/theworkinggroup/rails_model_faker
+  script/plugin install git://github.com/theworkinggroup/rails_model_faker.git
 
 == Examples
 
