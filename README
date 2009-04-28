@@ -34,6 +34,13 @@ Multiple fields can also be faked with a single call:
     end
   end
 
+Any related model can be faked without any special options:
+
+  class MyModel < ActiveRecord::Base
+    belongs_to :account
+    can_fake :account
+  end
+
 Using a fake-capable model is straightforward either by a direct call, or
 by an intermediate step:
 

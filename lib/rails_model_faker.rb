@@ -20,7 +20,17 @@ module RailsModelFaker
       @rmf_can_fake ||= { }
       
       names.flatten.each do |name|
-        @rmf_can_fake[name.to_sym] = block
+        name = name.to_sym
+
+        @rmf_can_fake[name] =
+          if (block)
+            block
+          else
+            # For associations, delay creation of block until first call
+            # to allow for additional relationships to be defined after
+            # the can_fake call. Leave placeholder only.
+            :reflection
+          end
       end
     end
     
@@ -50,10 +60,29 @@ module RailsModelFaker
     
     def fake_params(params = nil)
       params = (params || { }).symbolize_keys
-      
+      params.merge!(scope(:create).symbolize_keys) if (scope(:create))
+    
       @rmf_can_fake.each do |field, block|
         unless (params.key?(field))
-          params[field] = block.call(field)
+          case (block)
+          when :reflection
+            if (reflection = reflect_on_association(field))
+              primary_key = reflection.primary_key_name.to_sym
+              block = @rmf_can_fake[field] =
+                lambda do |existing_params|
+                  existing_params.key?(primary_key) ? nil : reflection.klass.send(:create_fake)
+                end
+            end
+          end
+            
+          result = block.call(params)
+          
+          case (result)
+          when nil
+            # Declined to populate parameters
+          else
+            params[field] = result
+          end
         end
       end
       
