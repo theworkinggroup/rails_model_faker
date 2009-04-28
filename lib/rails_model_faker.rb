@@ -131,8 +131,9 @@ module RailsModelFaker
           result = fake(field, params)
           
           case (result)
-          when nil
-            # Declined to populate parameters
+          when nil, params
+            # Declined to populate parameters if method returns nil
+            # or returns the existing parameter set.
           else
             params[field] = result
           end
