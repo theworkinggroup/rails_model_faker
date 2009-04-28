@@ -50,6 +50,26 @@ This also works for associations:
   fake = MyModel.create_fake
   fake_account = fake.accounts.create_fake
 
+Additionally, generic fake methods can be defined using an initalizer:
+
+  # config/initializers/faker.rb
+
+  RailsModelFaker.config do
+    can_fake :company_name do
+      Faker::Company.name
+    end
+  end
+
+These module extensions can be used to simplify the definition of fakers:
+
+  class MyCompany < ActiveRecord::Base
+    can_fake :name, :with => :company_name
+  end
+
+Once defined, a model class can be used to fake individual parameters:
+
+  MyCompany.fake(:name)
+
 Using a fake-capable model is straightforward either by a direct call, or
 by an intermediate step:
 

@@ -8,11 +8,42 @@ module RailsModelFaker
     FakeMethods.send(:extend, new_module)
   end
   
+  def self.can_fake(*names, &block)
+    case (names.last)
+    when Hash
+      options = names.pop
+    end
+    
+    if (options and options[:with])
+      block = options[:with]
+    end
+
+    FakeMethods.send(
+      :extend,
+      names.inject(Module.new) do |m, name|
+        m.send(:define_method, name, &block)
+        m
+      end
+    )
+  end
+  
+  def self.config(&block)
+    RailsModelFaker.instance_eval(&block)
+  end
+  
+  def self.include(addon)
+    RailsModelFaker.send(:extend, addon)
+  end
+  
   module FakeMethods
     # Placeholder for generic fake methods
   end
   
   module ClassMethods
+    def fake_field_config
+      @rmf_can_fake ||= { }
+    end
+    
     def can_fake(*names, &block)
       options = nil
 
@@ -30,15 +61,11 @@ module RailsModelFaker
       names.flatten.each do |name|
         name = name.to_sym
 
-        @rmf_can_fake[name] =
-          if (block)
-            block
-          else
-            # For associations, delay creation of block until first call
-            # to allow for additional relationships to be defined after
-            # the can_fake call. Leave placeholder only.
-            :reflection
-          end
+        # For associations, delay creation of block until first call
+        # to allow for additional relationships to be defined after
+        # the can_fake call. Leave placeholder (true) instead.
+
+        @rmf_can_fake[name] = block || true
       end
     end
     
@@ -62,12 +89,37 @@ module RailsModelFaker
       create!(fake_params(params))
     end
     
-    def fake_param(name)
+    def fake(name, params = nil)
       name = name.to_sym
       
-      return unless (@rmf_can_fake[name])
-      
-      @rmf_can_fake[name].call(name)
+      block = @rmf_can_fake[name]
+
+      case (block)
+      when true
+        # Configure association faker the first time it is called
+        if (reflection = reflect_on_association(name))
+          primary_key = reflection.primary_key_name.to_sym
+          block = @rmf_can_fake[name] =
+            lambda do |new_class, existing_params|
+              existing_params.key?(primary_key) ? nil : reflection.klass.send(:create_fake)
+            end
+        else
+          block = @rmf_can_fake[name] = name
+        end
+      end
+
+      params ||= { }
+
+      case (block)
+      when Module
+        block.send(name, self, params)
+      when Symbol
+        FakeMethods.send(block, self, params)
+      when nil
+        raise "Unknown faker method #{name}"
+      else
+        block.call(self, params)
+      end
     end
     
     def fake_params(params = nil)
@@ -76,24 +128,7 @@ module RailsModelFaker
     
       @rmf_can_fake.each do |field, block|
         unless (params.key?(field))
-          case (block)
-          when :reflection
-            if (reflection = reflect_on_association(field))
-              primary_key = reflection.primary_key_name.to_sym
-              block = @rmf_can_fake[field] =
-                lambda do |new_class, existing_params|
-                  existing_params.key?(primary_key) ? nil : reflection.klass.send(:create_fake)
-                end
-            end
-          end
-          
-          result =  
-            case (block)
-            when Module
-              block.send(field, self, params)
-            else
-              block.call(self, params)
-            end
+          result = fake(field, params)
           
           case (result)
           when nil
