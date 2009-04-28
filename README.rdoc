@@ -1,16 +1,15 @@
-RailsModelFaker
-===============
+= RailsModelFaker
+Author:: {The Working Group, Inc}[http://twg.ca/]
+Version:: 0.0.4
 
 A simple method for adding automatic fake record generation to Ruby on Rails
 via a plugin.
 
-Installation:
+== Installation
 
   script/plugin install git://github.com/theworkinggroup/rails_model_faker
 
-
-Example
-=======
+== Examples
 
 Adding support to an existing model is easy:
 
@@ -55,8 +54,21 @@ Additionally, generic fake methods can be defined using an initalizer:
   # config/initializers/faker.rb
 
   RailsModelFaker.config do
+    # Define a simple company_name generator
     can_fake :company_name do
       Faker::Company.name
+    end
+
+    # The model class and the defined parameters are provided,
+    # but do not need to be used. In this case it will push
+    # in multiple parameters
+    can_fake :full_name do |model_class, params|
+      params[:first_name] = Faker::Name.first_name
+      params[:last_name] = Faker::Name.last_name
+
+      # If not intending to populate a specific field, return
+      # the modified params.
+      params
     end
   end
 
