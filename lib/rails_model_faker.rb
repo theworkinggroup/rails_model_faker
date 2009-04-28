@@ -126,7 +126,7 @@ module RailsModelFaker
       params = (params || { }).symbolize_keys
       params.merge!(scope(:create).symbolize_keys) if (scope(:create))
     
-      @rmf_can_fake.each do |field, block|
+      fake_field_config.each do |field, block|
         unless (params.key?(field))
           result = fake(field, params)
           
