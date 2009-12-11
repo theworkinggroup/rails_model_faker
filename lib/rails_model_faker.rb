@@ -4,6 +4,20 @@ module RailsModelFaker
     base.send(:include, InstanceMethods)
   end
   
+  def self.combine_create_params(*param_sets)
+    final_params = { }
+    
+    # Apply param_sets in order they are listed
+    param_sets.compact.each do |params|
+      params.each do |k, v|
+        # Ignore nil assignments
+        final_params[k.to_sym] = v if (v)
+      end
+    end
+
+    final_params
+  end
+  
   def self.add_module(new_module)
     FakeMethods.send(:extend, new_module)
   end
@@ -110,7 +124,7 @@ module RailsModelFaker
         end
       end
 
-      params ||= { }
+      params = RailsModelFaker.combine_create_params(scope(:create), params)
 
       case (block)
       when Module
@@ -125,9 +139,8 @@ module RailsModelFaker
     end
     
     def fake_params(params = nil)
-      params = (params || { }).symbolize_keys
-      params.merge!(scope(:create).symbolize_keys) if (scope(:create))
-    
+      params = RailsModelFaker.combine_create_params(scope(:create), params)
+      
       @rmf_can_fake_order.each do |field|
         unless (params.key?(field))
           result = fake(field, params)
