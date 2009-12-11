@@ -57,6 +57,7 @@ module RailsModelFaker
       end
       
       @rmf_can_fake ||= { }
+      @rmf_can_fake_order ||= [ ]
       
       names.flatten.each do |name|
         name = name.to_sym
@@ -66,6 +67,7 @@ module RailsModelFaker
         # the can_fake call. Leave placeholder (true) instead.
 
         @rmf_can_fake[name] = block || true
+        @rmf_can_fake_order << name
       end
     end
     
@@ -126,7 +128,7 @@ module RailsModelFaker
       params = (params || { }).symbolize_keys
       params.merge!(scope(:create).symbolize_keys) if (scope(:create))
     
-      fake_field_config.each do |field, block|
+      @rmf_can_fake_order.each do |field|
         unless (params.key?(field))
           result = fake(field, params)
           
