@@ -98,7 +98,7 @@ module RailsModelFaker
       
       @rmf_can_fake_order.each do |name|
         if (reflection = reflect_on_association(name))
-          unless (model.send(name))
+          unless ((params and params.key?(name.to_sym)) or model.send(name))
             model.send(:"#{name}=", fake_method_call(model, params, fake_method(name)))
           end
         else
