@@ -97,8 +97,14 @@ module RailsModelFaker
       model = new(RailsModelFaker.combine_create_params(scope(:create), params))
       
       @rmf_can_fake_order.each do |name|
-        unless (params and (params.key?(name.to_sym) or params.key?(name.to_s)))
-          model.send(:"#{name}=", fake_method_call(model, params, fake_method(name)))
+        if (reflection = reflect_on_association(name))
+          unless (model.send(name))
+            model.send(:"#{name}=", fake_method_call(model, params, fake_method(name)))
+          end
+        else
+          unless (params and (params.key?(name.to_sym) or params.key?(name.to_s)))
+            model.send(:"#{name}=", fake_method_call(model, params, fake_method(name)))
+          end
         end
       end
       
