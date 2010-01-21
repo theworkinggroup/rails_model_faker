@@ -94,48 +94,37 @@ module RailsModelFaker
     end
     
     def build_fake(params = nil)
-      new(fake_params(params))
+      model = new(RailsModelFaker.combine_create_params(scope(:create), params))
+      
+      @rmf_can_fake_order.each do |name|
+        unless (params and (params.key?(name.to_sym) or params.key?(name.to_s)))
+          model.send(:"#{name}=", fake_method_call(model, params, fake_method(name)))
+        end
+      end
+      
+      model
     end
 
     def create_fake(params = nil)
-      create(fake_params(params))
+      model = build_fake(params)
+      
+      model.save
+      
+      model
     end
 
     def create_fake!(params = nil)
-      create!(fake_params(params))
+      model = build_fake(params)
+      
+      model.save!
+      
+      model
     end
     
     def fake(name, params = nil)
-      name = name.to_sym
-      
-      block = @rmf_can_fake[name]
-
-      case (block)
-      when true
-        # Configure association faker the first time it is called
-        if (reflection = reflect_on_association(name))
-          primary_key = reflection.primary_key_name.to_sym
-          block = @rmf_can_fake[name] =
-            lambda do |new_class, existing_params|
-              existing_params.key?(primary_key) ? nil : reflection.klass.send(:create_fake)
-            end
-        else
-          block = @rmf_can_fake[name] = name
-        end
-      end
-
       params = RailsModelFaker.combine_create_params(scope(:create), params)
-
-      case (block)
-      when Module
-        block.send(name, self, params)
-      when Symbol
-        FakeMethods.send(block, self, params)
-      when nil
-        raise "Unknown faker method #{name}"
-      else
-        block.call(self, params)
-      end
+      
+      fake_method_call(nil, params, fake_method(name))
     end
     
     def fake_params(params = nil)
@@ -156,6 +145,45 @@ module RailsModelFaker
       end
       
       params
+    end
+    
+  protected
+    def fake_method_call(model, params, block)
+      case (block.arity)
+      when 2, -1
+        block.call(model, params)
+      when 1
+        block.call(model)
+      else
+        block.call
+      end
+    end
+    
+    def fake_method(name)
+      name = name.to_sym
+      
+      block = @rmf_can_fake[name]
+
+      case (block)
+      when Module
+        block.method(name)
+      when Symbol
+        FakeMethods.method(name)
+      when true
+        # Configure association faker the first time it is called
+        if (reflection = reflect_on_association(name))
+          primary_key = reflection.primary_key_name.to_sym
+
+          @rmf_can_fake[name] =
+            lambda do |model, params|
+              (params and params.key?(primary_key)) ? nil : reflection.klass.send(:create_fake)
+            end
+        else
+          raise "Cannot fake unknown relationship #{name}"
+        end
+      else
+        block
+      end
     end
   end
   
