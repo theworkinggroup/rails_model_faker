@@ -95,32 +95,24 @@ module RailsModelFaker
     
     def build_fake(params = nil)
       model = new(RailsModelFaker.combine_create_params(scope(:create), params))
-      
-      @rmf_can_fake_order.each do |name|
-        if (reflection = reflect_on_association(name))
-          unless ((params and params.key?(name.to_sym)) or model.send(name))
-            model.send(:"#{name}=", fake_method_call(model, params, fake_method(name)))
-          end
-        else
-          unless (params and (params.key?(name.to_sym) or params.key?(name.to_s)))
-            model.send(:"#{name}=", fake_method_call(model, params, fake_method(name)))
-          end
-        end
-      end
+
+      yield(model) if (block_given?)
+
+      self.execute_fake_operation(model, params)
       
       model
     end
-
-    def create_fake(params = nil)
-      model = build_fake(params)
+    
+    def create_fake(params = nil, &block)
+      model = build_fake(params, &block)
       
       model.save
       
       model
     end
 
-    def create_fake!(params = nil)
-      model = build_fake(params)
+    def create_fake!(params = nil, &block)
+      model = build_fake(params, &block)
       
       model.save!
       
@@ -151,6 +143,22 @@ module RailsModelFaker
       end
       
       params
+    end
+    
+    def execute_fake_operation(model, params = nil)
+      @rmf_can_fake_order.each do |name|
+        if (reflection = reflect_on_association(name))
+          unless ((params and params.key?(name.to_sym)) or model.send(name))
+            model.send(:"#{name}=", fake_method_call(model, params, fake_method(name)))
+          end
+        else
+          unless (params and (params.key?(name.to_sym) or params.key?(name.to_s)))
+            model.send(:"#{name}=", fake_method_call(model, params, fake_method(name)))
+          end
+        end
+      end
+      
+      model
     end
     
   protected
@@ -194,6 +202,8 @@ module RailsModelFaker
   end
   
   module InstanceMethods
-    # ...
+    def fake!(params = nil)
+      self.class.execute_fake_operation(self, params)
+    end
   end
 end

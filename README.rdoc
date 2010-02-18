@@ -112,4 +112,4 @@ All models can be interrogated as to their faking capability:
 
   MyModel.can_fake?(:name) # => true
 
-Copyright (c) 2009 The Working Group (http://twg.ca/)
+Copyright (c) 2009-2010 The Working Group (http://twg.ca/)
